@@ -1,6 +1,8 @@
 #ifdef HAS_MQTT
 
 #include "mqttclient.h"
+#define STRINGIFY_HELPER(x) #x
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
 
 static QueueHandle_t MQTTSendQueue;
 TaskHandle_t mqttTask;
@@ -96,9 +98,22 @@ void mqtt_client_task(void *param) {
         delay(10);
         continue;
       }
-      // prepare mqtt topic
-      char topic[16];
-      snprintf(topic, 16, "%s/%u", MQTT_OUTTOPIC, msg.MessagePort);
+      
+      // prepare mqtt topic with device ID
+      #ifdef DEVICE_NAME
+      // Define a helper macro to convert DEVICE_NAME to a string
+      #ifndef STRINGIFY
+      #define STRINGIFY_HELPER(x) #x
+      #define STRINGIFY(x) STRINGIFY_HELPER(x)
+      #endif
+
+        char topic[64];  // Increased buffer size to accommodate longer topic
+        snprintf(topic, 64, "%s/%s/%u", MQTT_OUTTOPIC, STRINGIFY(DEVICE_NAME), msg.MessagePort);
+        #else
+        char topic[16];
+        snprintf(topic, 16, "%s/%u", MQTT_OUTTOPIC, msg.MessagePort);
+        #endif
+      
       size_t out_len = 0;
 
       // get length of base64 encoded message
@@ -123,7 +138,6 @@ void mqtt_client_task(void *param) {
       mqtt_connect(MQTT_SERVER, MQTT_PORT);
     }
   } // while (1)
-
 }
 
 // process incoming MQTT messages
